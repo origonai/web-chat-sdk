@@ -21,7 +21,7 @@ yarn add @origonai/web-chat-sdk
 
 ## Quick Start
 
-### Basic Chat Example
+### Chat Example
 
 ```javascript
 import {
@@ -66,7 +66,7 @@ await sendMessage({ text: 'Hello!' })
 disconnect()
 ```
 
-### Voice Call Example
+### Call Example
 
 ```javascript
 import {
