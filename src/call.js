@@ -27,6 +27,8 @@ import { getCredentials, getExternalId, updateSessionId } from './chat.js'
  * @property {number} pingCount
  * @property {number | null} lastPongTime
  * @property {CallCallbacks} callbacks
+ * @property {string[]} localIceCandidates - Queued local ICE candidates to send after remote description is set
+ * @property {string[]} pendingRemoteIceCandidates - Queued remote ICE candidates to add after remote description is set
  */
 
 /**
@@ -47,7 +49,9 @@ function createSession(callbacks = {}) {
     pingInterval: null,
     pingCount: 0,
     lastPongTime: null,
-    callbacks
+    callbacks,
+    localIceCandidates: [],
+    pendingRemoteIceCandidates: []
   }
 }
 
@@ -204,12 +208,20 @@ function createPeerConnection() {
 
   currentSession.peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
-      sendEvent({
-        type: 'ice',
-        data: {
-          candidate: JSON.stringify(event.candidate)
-        }
-      })
+      const candidateJson = JSON.stringify(event.candidate)
+      // Queue local ICE candidates until remote description is set
+      if (currentSession.peerConnection && currentSession.peerConnection.remoteDescription) {
+        sendEvent({
+          type: 'ice',
+          data: {
+            candidate: candidateJson
+          }
+        })
+        console.log('Sent ICE candidate immediately')
+      } else {
+        currentSession.localIceCandidates.push(candidateJson)
+        console.log('Queued local ICE candidate')
+      }
     }
   }
 
@@ -378,6 +390,30 @@ async function handleAnswer(data) {
       console.log('Setting remote description answer: ', answer)
       await currentSession.peerConnection.setRemoteDescription(answer)
       console.log('Remote description set')
+
+      // Send all queued local ICE candidates
+      for (const candidateJson of currentSession.localIceCandidates) {
+        sendEvent({
+          type: 'ice',
+          data: {
+            candidate: candidateJson
+          }
+        })
+        console.log('Sent queued local ICE candidate')
+      }
+      currentSession.localIceCandidates = []
+
+      // Process any pending remote ICE candidates
+      for (const candidateJson of currentSession.pendingRemoteIceCandidates) {
+        try {
+          const candidate = new RTCIceCandidate(JSON.parse(candidateJson))
+          await currentSession.peerConnection.addIceCandidate(candidate)
+          console.log('Added pending remote ICE candidate')
+        } catch (err) {
+          console.error(`Failed to add pending ICE candidate: ${err.message}`)
+        }
+      }
+      currentSession.pendingRemoteIceCandidates = []
     }
   } catch (error) {
     console.error(`Failed to handle answer: ${error.message}`)
@@ -391,6 +427,13 @@ async function handleAnswer(data) {
 async function handleIceCandidate(data) {
   try {
     if (currentSession.peerConnection) {
+      // Check if remote description is set
+      if (!currentSession.peerConnection.remoteDescription) {
+        // Queue the candidate until remote description is set
+        currentSession.pendingRemoteIceCandidates.push(data.candidate)
+        console.log('Queued remote ICE candidate - remote description not set')
+        return
+      }
       const candidate = new RTCIceCandidate(JSON.parse(data.candidate))
       await currentSession.peerConnection.addIceCandidate(candidate)
       console.log('Added ICE candidate')
