@@ -278,10 +278,10 @@ Enum for message roles in the chat.
 ```javascript
 import { MESSAGE_ROLES } from '@origonai/web-chat-sdk'
 
-MESSAGE_ROLES.BOT      // 'assistant' - AI/bot responses
-MESSAGE_ROLES.USER     // 'user' - End user messages
-MESSAGE_ROLES.AGENT    // 'agent' - Human agent messages
-MESSAGE_ROLES.SYSTEM   // 'system' - System notifications
+MESSAGE_ROLES.BOT // 'assistant' - AI/bot responses
+MESSAGE_ROLES.USER // 'user' - End user messages
+MESSAGE_ROLES.AGENT // 'agent' - Human agent messages
+MESSAGE_ROLES.SYSTEM // 'system' - System notifications
 ```
 
 ---
@@ -300,7 +300,7 @@ interface Message {
   loading?: boolean
   done?: boolean
   errorText?: string
-  video?: object  // YouTube video data
+  video?: object // YouTube video data
   channel?: string
 }
 ```
@@ -395,7 +395,7 @@ async function updateAudioLevel() {
   try {
     const inbound = await getInboundAudioEnergy()
     const outbound = await getOutboundAudioEnergy()
-    
+
     updateVisualization({ inbound, outbound })
   } catch (e) {
     // Handle no active call
@@ -421,4 +421,3 @@ Voice calls require WebRTC support and microphone permissions.
 ## License
 
 MIT © Origon
-
